@@ -1,0 +1,153 @@
+<div class="boletim-container">
+  <h2>Lançamento de Notas - Boletim do Aluno</h2>
+
+  <!-- Filtros -->
+  <div class="filtro-section">
+    <form [formGroup]="filtroForm" (ngSubmit)="buscarDadosBoletim()">
+      <div class="filtro-row">
+        <mat-form-field appearance="outline" class="filtro-field">
+          <mat-label>Turma</mat-label>
+          <mat-select formControlName="turmaId" (selectionChange)="limparMensagens()">
+            <mat-option *ngFor="let turma of turmas" [value]="turma.id">
+              {{ turma.nome }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="filtroForm.get('turmaId')?.hasError('required')">
+            Turma é obrigatória
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filtro-field">
+          <mat-label>Disciplina</mat-label>
+          <mat-select formControlName="disciplinaId" (selectionChange)="limparMensagens()">
+            <mat-option *ngFor="let disciplina of disciplinas" [value]="disciplina.id">
+              {{ disciplina.nome }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="filtroForm.get('disciplinaId')?.hasError('required')">
+            Disciplina é obrigatória
+          </mat-error>
+        </mat-form-field>
+
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
+          class="botao-buscar"
+          [disabled]="!filtroForm.valid || carregando">
+          <mat-icon *ngIf="carregando" class="spinner">refresh</mat-icon>
+          {{ carregando ? 'Carregando...' : 'Buscar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Mensagens -->
+  <div class="mensagens">
+    <mat-error *ngIf="mensagemErro" class="mensagem-erro">
+      {{ mensagemErro }}
+    </mat-error>
+    <div *ngIf="mensagemSucesso" class="mensagem-sucesso">
+      {{ mensagemSucesso }}
+    </div>
+  </div>
+
+  <!-- Tabela de Notas -->
+  <div class="tabela-section" *ngIf="dadosBoletim && !carregando">
+    <div class="header-info">
+      <h3>
+        Turma: {{ dadosBoletim.turma.nome }} |
+        Disciplina: {{ dadosBoletim.disciplina.nome }}
+      </h3>
+      <button
+        mat-raised-button
+        color="accent"
+        (click)="salvarLancamentos()"
+        [disabled]="salvando || !notasForm.valid"
+        *ngIf="dadosBoletim.avaliacoes.length > 0">
+        <mat-icon *ngIf="salvando" class="spinner">refresh</mat-icon>
+        {{ salvando ? 'Salvando...' : 'Salvar Lançamentos' }}
+      </button>
+    </div>
+
+    <!-- Tabela quando há avaliações -->
+    <div class="table-container" *ngIf="dadosBoletim.avaliacoes.length > 0">
+      <table mat-table [dataSource]="lancamentosArray.controls" class="notas-table">
+
+        <!-- Coluna Aluno -->
+        <ng-container matColumnDef="aluno">
+          <th mat-header-cell *matHeaderCellDef>Aluno</th>
+          <td mat-cell *matCellDef="let element; let i = index">
+            <div class="aluno-info">
+              <strong>{{ getAlunoPorIndice(i)?.aluno?.nome || 'N/A' }}</strong>
+              <small>Mat: {{ getAlunoPorIndice(i)?.aluno?.matricula || 'N/A' }}</small>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Colunas para cada avaliação -->
+        <ng-container *ngFor="let avaliacao of getAvaliacoes()" [matColumnDef]="'avaliacao_' + avaliacao.id">
+          <th mat-header-cell *matHeaderCellDef class="avaliacao-header">
+            {{ avaliacao.nome }}
+            <div class="peso">Peso: {{ avaliacao.peso }}</div>
+          </th>
+          <td mat-cell *matCellDef="let element; let i = index">
+            <!-- ADICIONE ESTA DIV COM formGroup -->
+            <div [formGroup]="element">
+              <mat-form-field appearance="outline" class="nota-field">
+                <input
+                  matInput
+                  type="number"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  [formControlName]="'avaliacao_' + avaliacao.id"
+                  (input)="onNotaChange(i, avaliacao.id, $event)"
+                  placeholder="0-10">
+                <mat-error *ngIf="element.get('avaliacao_' + avaliacao.id)?.hasError('min')">
+                  Mínimo: 0
+                </mat-error>
+                <mat-error *ngIf="element.get('avaliacao_' + avaliacao.id)?.hasError('max')">
+                  Máximo: 10
+                </mat-error>
+              </mat-form-field>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Coluna Média -->
+        <ng-container matColumnDef="media">
+          <th mat-header-cell *matHeaderCellDef class="media-header">Média</th>
+          <td mat-cell *matCellDef="let element; let i = index" class="media-cell">
+            <div class="media-value" [class.sem-nota]="!calcularMediaAluno(i)">
+              {{ calcularMediaAluno(i) !== null ? calcularMediaAluno(i) : '-' }}
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="getColunasTabela()"></tr>
+        <tr mat-row *matRowDef="let row; columns: getColunasTabela();"></tr>
+      </table>
+    </div>
+
+    <!-- Mensagem quando NÃO há avaliações -->
+    <div *ngIf="dadosBoletim.avaliacoes.length === 0" class="aviso-sem-avaliacoes">
+      <mat-card>
+        <mat-card-content>
+          <mat-icon>assignment</mat-icon>
+          <div class="aviso-content">
+            <h3>Nenhuma avaliação cadastrada</h3>
+            <p>Não há avaliações cadastradas para <strong>{{ dadosBoletim.disciplina.nome }}</strong> na <strong>{{ dadosBoletim.turma.nome }}</strong>.</p>
+            <p class="sugestao">Sugestão: Selecione <strong>Turma "9º Ano - Turma A"</strong> com <strong>Disciplina "Matemática"</strong> para ver avaliações cadastradas.</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="carregando" class="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span>Carregando dados...</span>
+  </div>
+</div>

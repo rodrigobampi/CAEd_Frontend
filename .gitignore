@@ -1,0 +1,21 @@
+# Angular
+/dist
+/node_modules
+/.angular
+/cache
+
+# IDE
+/.idea
+/.vscode
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Ambiente
+.env
+.env.local
