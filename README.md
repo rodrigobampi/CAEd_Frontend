@@ -99,8 +99,13 @@ ng lint
 ## ||| Integracao com Backend
 
 ## Acesso Segurança - Autenticacao e Controle de Acesso
- 
-Em um cenario real, implementaria Guards do Angular para controle de rotas, um AuthService para gerenciamento do token JWT e um Interceptor HTTP para incluir automaticamente o token nas requisicoes. A interface mostraria apenas funcionalidades permitidas para o perfil do usuario logado, com diferentes niveis de acesso para professores, coordenadores e alunos. 
+
+Em um cenario real, a autenticacao seria delegada, seguindo o padrao OAuth 2.0 com OpenID Connect (OIDC). O Angular utilizaria uma biblioteca compativel (como angular-oauth2-oidc) para iniciar o fluxo de login no Servidor de Autorizacao.
+Gerenciamento de Token: Um AuthService dedicado gerenciaria o ciclo de vida do Access Token (JWT), incluindo o armazenamento seguro e a verificacao de expiracao.
+Controle de Rotas: Seriam implementados Angular Guards (CanActivate) para proteger as rotas, garantindo que o usuario esteja autenticado e possua as roles adequadas (PROFESSOR, COORDENADOR, ALUNO) para acessar modulos especificos.
+Comunicacao Segura: Um HTTP Interceptor seria configurado para anexar automaticamente o JWT no cabecalho Authorization: Bearer de todas as requisicoes enviadas ao backend (Resource Server).
+Controle de UI: A interface utilizaria as claims de role do JWT para renderizar elementos condicionalmente, exibindo apenas as funcionalidades permitidas para o perfil logado.
+
 
 ### Endpoints Consumidos
 | Metodo | Endpoint | Descricao |
